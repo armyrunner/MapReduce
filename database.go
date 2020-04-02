@@ -150,6 +150,19 @@ func splitDatabase(source, outputPattern string, m int) ([]string, error) {
 
 // need to make function mergeDatabase
 
+func mergeDatabase(urls []string, path string, temp string) (*sql.DB, error) {
+
+	outputDB := createDatabase(path)
+
+	for i := 0; i < temp; i++ {
+	}
+
+}
+
 // need to make function download
+func download(url, path string) error {
+
+	return nil
+}
 
 // need to make function gatherinto
