@@ -1,10 +1,13 @@
-package mapreduce
+package main
 
 import (
 	"database/sql"
 	"fmt"
+	"io"
 	"log"
+	"net/http"
 	"os"
+	_ "github.com/mattn/go-sqlite3"
 )
 
 func openDatabase(filename string) (*sql.DB, error) {
@@ -22,7 +25,7 @@ func openDatabase(filename string) (*sql.DB, error) {
 	if err != nil {
 		log.Fatalf("opening db: %v", err)
 	}
-
+	fmt.Println("Success in opening database")
 	db.Close()
 	return db, nil
 }
@@ -36,48 +39,24 @@ func createDatabase(filename string) (*sql.DB, error) {
 		log.Fatalf("opening db: %v", err)
 	}
 
-	create_stmt := `
+	createStmt := `
 	CREATE TABLE IF NOT EXISTS pairs(
 		key text primary key,
 		value text)`
 
-	if _, err := db.Exec(create_stmt); err != nil {
+	if _, err := db.Exec(createStmt); err != nil {
 		log.Fatalf("running create database: %v", err)
 	}
 
+	fmt.Println("Success in creating table pairs")
+
 	return db, nil
-}
-
-func countRows(db *sql.DB) (int, error) {
-
-	rows, err := db.Query("SELECT count(1) FROM pairs;")
-
-	if err != nil {
-		fmt.Println("failed to count rows")
-		return -1, err
-	}
-
-	defer rows.Close()
-
-	count := 0
-
-	for rows.Next() {
-		err := rows.Scan(&count)
-		if err != nil {
-			fmt.Println("Failed to Scan through rows")
-			return -1, err
-
-		}
-		log.Println("number of rows: ", count)
-	}
-
-	return count, nil
-
 }
 
 func splitDatabase(source, outputPattern string, m int) ([]string, error) {
 
 	// open the database
+	fmt.Println("opening database")
 	db, err := openDatabase(source)
 	if err != nil {
 		log.Fatalf("split database: %v", err)
@@ -85,21 +64,13 @@ func splitDatabase(source, outputPattern string, m int) ([]string, error) {
 
 	defer db.Close()
 
-	//check the number
-	count, err := countRows(db)
-
-	if count < m {
-		log.Fatalf("count %v", count, " is less then m %v", m, err)
-	}
-
-	fmt.Println("Number of Rows is:", count)
-
 	//create a list slice of all the outputdatabase
-	outputdb := make([]*sql.DB, 0)
+	var outputdb  []*sql.DB
 
 	//create a list of slices of pathnames
-	pathnames := make([]string, 0)
-	for i := 0; i < m; i++ {
+	var pathnames []string
+
+	for i := 0; i < m; i++ { 
 
 		//get outpout of pathnames
 		pathnamestring := fmt.Sprintf(outputPattern, i)
@@ -108,7 +79,7 @@ func splitDatabase(source, outputPattern string, m int) ([]string, error) {
 		outputdatabase, err := createDatabase(pathnamestring)
 
 		if err != nil {
-			log.Fatalf("Fail to split database")
+			log.Fatalf("Fail to created output database", err)
 		}
 
 		outputdb = append(outputdb, outputdatabase)
@@ -116,34 +87,47 @@ func splitDatabase(source, outputPattern string, m int) ([]string, error) {
 		pathnames = append(pathnames, pathnamestring)
 	}
 
-	// query the database for the key/ value
+	// query the database for the key/ value on the input file
 
 	rows, err := db.Query("SELECT key, value FROM pairs;")
 	if err != nil {
 		log.Fatalf("Did not find key/value in pairs")
+	}
 
+
+	// initialize the index value
+	index := 0
+
+
+	// looping through all the rows
+	for rows.Next() {
+
+		var key string
+		var value string
+
+		db := outputdb[index]
+		err = rows.Scan(&key, &value)
+
+		// if err != nil {
+		// 	log.Fatalf("Did not insert key/value into pairs")
+		// }
+
+		_, err := db.Exec(`INSERT INTO pairs (key,value) values(?,?)`, key, value)
+		if err != nil {
+			log.Fatalf("Did not insert key/value into pairs")
+		}
+		index++
+
+		if index >= len(outputdb){
+			index = 0
+		}
 	}
 
 	defer rows.Close()
 
-	// initialize the index value
-	index := 0
-	var key string
-	var value string
+	//check err if anything went wrong
 
-	// looping through all the rows
-	for rows.Next() {
-		db := outputdb[index]
-		rows.Scan(&key, &value)
-
-		_, err := db.Exec(`INSERT INTO pairs (key,value) values(?,?)`, key, value)
-		index++
-		defer db.Close()
-
-		if err != nil {
-			log.Fatalf("Did not insert key/value into pairs")
-		}
-	}
+	// new for loop to close all close;
 
 	return pathnames, nil
 }
@@ -152,17 +136,90 @@ func splitDatabase(source, outputPattern string, m int) ([]string, error) {
 
 func mergeDatabase(urls []string, path string, temp string) (*sql.DB, error) {
 
-	outputDB := createDatabase(path)
+	//create the output databaser
+	outputdb, err := createDatabase(path)
+	if err != nil {
+		log.Fatalf("Did not create database %v", err)
 
-	for i := 0; i < temp; i++ {
 	}
 
+	// loop through all the urls
+	for _, url := range urls {
+
+		//download the url
+		err = download(url, temp)
+		if err != nil {
+			log.Fatalf("Did not dounload %v", err)
+
+		}
+
+		// gatherinto the databaser or merge database
+		err = gatherinto(outputdb, path)
+		if err != nil {
+			log.Printf("Did not gatherinto %v", err)
+
+		}
+
+		//delete temperary string variable
+		err = os.Remove(temp)
+		if err != nil {
+			log.Fatalf("Did not remove temp %v", err)
+		}
+
+	}
+
+	return outputdb, nil
 }
 
 // need to make function download
 func download(url, path string) error {
 
+	pathname, err := os.Create(path)
+	if err != nil {
+		log.Fatalf("Failed to create file %v", err)
+
+	}
+	defer pathname.Close()
+
+	res, err := http.Get(url)
+	if err != nil {
+
+		log.Fatalf("Failed to download file %v", err)
+
+	}
+	defer res.Body.Close()
+
+	_, err = io.Copy(pathname, res.Body)
+	if err != nil {
+		log.Fatalf("Failed to copy file %v", err)
+	}
+
 	return nil
 }
 
 // need to make function gatherinto
+
+func gatherinto(db *sql.DB, path string) error {
+
+	querydatabase := fmt.Sprintf("attach '%s' as merge;", path)
+
+	_, err := db.Exec(querydatabase)
+	if err != nil {
+		log.Fatalf("Did not attach to merge %v", err)
+
+	}
+
+	_, err = db.Exec("INSERT INTO PAIRS SELECT * FROM merge.pairs")
+	if err != nil {
+		log.Fatalf("Did not insert into merge.pairs %v", err)
+
+	}
+
+	_, err = db.Exec("detach merge;")
+	if err != nil {
+		log.Fatalf("Did not detach merge %v", err)
+	}
+
+	return nil
+
+}
