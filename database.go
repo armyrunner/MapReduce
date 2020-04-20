@@ -81,7 +81,7 @@ func splitDatabase(source, outputPattern string, m int) ([]string, error) {
 		outputdb2, err := createDatabase(pathnamestring)
 
 		if err != nil {
-			log.Fatalf("Fail to created output database", err)
+			log.Fatalf("Fail to created output database: %v", err)
 		}
 
 		outputdb = append(outputdb, outputdb2)
@@ -162,7 +162,7 @@ func mergeDatabase(urls []string, path string, temp string) (*sql.DB, error) {
 		//download the url
 		err = download(url, temp)
 		if err != nil {
-			log.Fatalf("Did not dounload %v", err)
+			log.Fatalf("Did not download %v", err)
 
 		}
 
@@ -295,3 +295,4 @@ func gatherinto(db *sql.DB, path string) error {
 //     //return err
 //     return outputDBs, err
 // }
+}
