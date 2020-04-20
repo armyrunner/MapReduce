@@ -57,12 +57,12 @@ func splitDatabase(source, outputPattern string, m int) ([]string, error) {
 
 	// open the database
 	fmt.Println("opening database")
-	db, err := openDatabase(source)
+	maindb, err := openDatabase(source)
 	if err != nil {
 		log.Fatalf("split database: %v", err)
 	}
 
-	defer db.Close()
+	defer maindb.Close()
 
 	//create a list slice of all the outputdatabase
 	var outputdb  []*sql.DB
@@ -72,24 +72,26 @@ func splitDatabase(source, outputPattern string, m int) ([]string, error) {
 
 	for i := 0; i < m; i++ { 
 
+		var outputdb2 *sql.DB
+
 		//get outpout of pathnames
 		pathnamestring := fmt.Sprintf(outputPattern, i)
 
 		//createing new database
-		outputdatabase, err := createDatabase(pathnamestring)
+		outputdb2, err := createDatabase(pathnamestring)
 
 		if err != nil {
 			log.Fatalf("Fail to created output database: %v", err)
 		}
 
-		outputdb = append(outputdb, outputdatabase)
+		outputdb = append(outputdb, outputdb2)
 
 		pathnames = append(pathnames, pathnamestring)
 	}
 
 	// query the database for the key/ value on the input file
 
-	rows, err := db.Query("SELECT key, value FROM pairs;")
+	rows, err := maindb.Query(`SELECT key, value FROM pairs;`)
 	if err != nil {
 		log.Fatalf("Did not find key/value in pairs")
 	}
@@ -105,8 +107,9 @@ func splitDatabase(source, outputPattern string, m int) ([]string, error) {
 		var key string
 		var value string
 
-		db := outputdb[index]
 		err = rows.Scan(&key, &value)
+
+		db := outputdb[index]
 
 		// if err != nil {
 		// 	log.Fatalf("Did not insert key/value into pairs")
@@ -126,17 +129,25 @@ func splitDatabase(source, outputPattern string, m int) ([]string, error) {
 	defer rows.Close()
 
 	//check err if anything went wrong
+	if err := rows.Err(); err != nil{
+		fmt.Println("We have an error splitDatabase rows.Err()", err);
+	}
+
+	maindb.Close()
 
 	// new for loop to close all close;
+	for i := 0; i < m; i++{
+		outputdb[i].Close()
+	}
 
-	return pathnames, nil
+	return pathnames, err
 }
 
 // need to make function mergeDatabase
 
 func mergeDatabase(urls []string, path string, temp string) (*sql.DB, error) {
 
-	//create the output databaser
+	//create the output databasef
 	outputdb, err := createDatabase(path)
 	if err != nil {
 		log.Fatalf("Did not create database %v", err)
@@ -209,7 +220,7 @@ func gatherinto(db *sql.DB, path string) error {
 
 	}
 
-	_, err = db.Exec("INSERT INTO PAIRS SELECT * FROM merge.pairs")
+	_, err = db.Exec(`INSERT INTO PAIRS SELECT * FROM merge.pairs`)
 	if err != nil {
 		log.Fatalf("Did not insert into merge.pairs %v", err)
 
