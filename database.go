@@ -115,7 +115,7 @@ func splitDatabase(source, outputPattern string, m int) ([]string, error) {
 		// 	log.Fatalf("Did not insert key/value into pairs")
 		// }
 
-		_, err := db.Exec(`INSERT INTO pairs (key,value) values(?,?)`, key, value)
+		_, err := db.Exec(`INSERT INTO pairs (key,value) values (?, ?)`, key, value)
 		if err != nil {
 			log.Fatalf("Did not insert key/value into pairs")
 		}
