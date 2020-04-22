@@ -35,6 +35,8 @@ func createDatabase(filename string) (*sql.DB, error) {
 	os.Remove(filename)
 
 	db, err := sql.Open("sqlite3", filename)
+	defer db.Close()
+	
 	if err != nil {
 		log.Fatalf("opening db: %v", err)
 	}
