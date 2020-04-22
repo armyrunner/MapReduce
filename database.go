@@ -62,35 +62,34 @@ func splitDatabase(source, outputPattern string, m int) ([]string, error) {
 	// open the database
 	fmt.Println("opening database")
 	maindb, err := openDatabase(source)
+	//create a list slice of all the outputdatabase
+	var allSplits  []*sql.DB
+	//create a list of slices of pathnames
+	var outputs []string
+
 	if err != nil {
 		log.Fatalf("split database: %v", err)
 	}
 
 	defer maindb.Close()
 
-	//create a list slice of all the outputdatabase
-	var outputdb  []*sql.DB
-
-	//create a list of slices of pathnames
-	var pathnames []string
-
 	for i := 0; i < m; i++ { 
 
-		var outputdb2 *sql.DB
+		var splitDB *sql.DB
 
 		//get outpout of pathnames
 		pathnamestring := fmt.Sprintf(outputPattern, i)
 
 		//createing new database
-		outputdb2, err := createDatabase(pathnamestring)
+		splitDB, err := createDatabase(pathnamestring)
 
 		if err != nil {
 			log.Fatalf("Fail to created output database: %v", err)
 		}
 
-		outputdb = append(outputdb, outputdb2)
+		allSplits = append(allSplits, splitDB)
 
-		pathnames = append(pathnames, pathnamestring)
+		outputs = append(outputs, pathnamestring)
 	}
 
 	// query the database for the key/ value on the input file
@@ -100,10 +99,9 @@ func splitDatabase(source, outputPattern string, m int) ([]string, error) {
 		log.Fatalf("Did not find key/value in pairs %v",err)
 	}
 
-
 	// initialize the index value
+	keys := 0
 	index := 0
-
 
 	// looping through all the rows
 	for rows.Next() {
@@ -113,26 +111,23 @@ func splitDatabase(source, outputPattern string, m int) ([]string, error) {
 
 		err := rows.Scan(&key, &value)
 
-		db := outputdb[index]
+		db := allSplits[index]
 
 		// if err != nil {
 		// 	log.Fatalf("Did not insert key/value into pairs")
 		// }
 
 		_, err = db.Exec(`INSERT INTO pairs (key,value) values (?, ?)`, key, value)
-
 		if err != nil {
 			log.Fatalf("Did not insert key/value into pairs")
 		}
 
 		index++
-
-		if index >= len(outputdb){
+		keys++
+		if index >= m{
 			index = 0
 		}
 	}
-
-	defer rows.Close()
 
 	//check err if anything went wrong
 	if err := rows.Err(); err != nil{
@@ -143,10 +138,10 @@ func splitDatabase(source, outputPattern string, m int) ([]string, error) {
 
 	// new for loop to close all close;
 	for i := 0; i < m; i++{
-		outputdb[i].Close()
+		allSplits[i].Close()
 	}
 
-	return pathnames, err
+	return outputs, err
 }
 
 // need to make function mergeDatabase
