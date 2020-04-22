@@ -25,8 +25,9 @@ func openDatabase(filename string) (*sql.DB, error) {
 	if err != nil {
 		log.Fatalf("opening db: %v", err)
 	}
+	
 	fmt.Println("Success in opening database")
-	db.Close()
+
 	return db, nil
 }
 
@@ -34,10 +35,13 @@ func createDatabase(filename string) (*sql.DB, error) {
 
 	os.Remove(filename)
 
-	db, err := sql.Open("sqlite3", filename)
+
+	db, err := openDatabase(filename)
 	if err != nil {
-		log.Fatalf("opening db: %v", err)
+		return nil,err
 	}
+
+
 
 	createStmt := `
 	CREATE TABLE IF NOT EXISTS pairs(
@@ -93,7 +97,7 @@ func splitDatabase(source, outputPattern string, m int) ([]string, error) {
 
 	rows, err := maindb.Query(`SELECT key, value FROM pairs;`)
 	if err != nil {
-		log.Fatalf("Did not find key/value in pairs")
+		log.Fatalf("Did not find key/value in pairs %v",err)
 	}
 
 
@@ -237,62 +241,3 @@ func gatherinto(db *sql.DB, path string) error {
 
 }
 
-/* Rory's Code */
-
-
-// func splitDatabase(source, outputPattern string, m int) ([]string, error) {
-//     mainDB, err := openDatabase(source)
-//     var allSplitDBs []*sql.DB
-//     var outputDBs []string
-
-//     for i := 0; i < m; i++ {
-//         //substituting i for %d
-//         s := fmt.Sprintf(outputPattern, i)
-//         var splitDB *sql.DB
-//         splitDB, err = createDatabase(s)
-//         allSplitDBs = append(allSplitDBs, splitDB)
-//         outputDBs = append(outputDBs, s)
-//     }
-
-//     selectStatement := `SELECT key, value FROM pairs;`
-//     rows, err := mainDB.Query(selectStatement)
-
-//     keysProcessed := 0
-//     i := 0
-//     for rows.Next() {
-//         // fmt.Println(keysProcessed)
-//         // read the data using rows.Scan
-//         var key string
-//         var value string
-//         err := rows.Scan(&key, &value)
-//         // process the result
-//         db := allSplitDBs[i]
-//         _, err = db.Exec(`insert into pairs (key, value) values (?, ?)`, key, value)
-//         // check for error, etc.
-//         if err != nil {
-//             fmt.Println(err)
-//         }
-//         i++
-//         keysProcessed++
-//         if i >= m {
-//             i = 0
-//         }
-//     }
-//     if err := rows.Err(); err != nil {
-//         // handle the error
-//         fmt.Println("we have an error at splitDatabase rows.Err()")
-//         fmt.Println(err)
-//     }
-//     //close allSplitDBs and input DB
-//     //this can be done with defer
-//     mainDB.Close()
-
-//     for i := 0; i < m; i++ {
-//         allSplitDBs[i].Close()
-//     }
-
-//     //if ever err:
-//     //return err
-//     return outputDBs, err
-// }
-}
