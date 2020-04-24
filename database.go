@@ -7,6 +7,8 @@ import (
 	"log"
 	"net/http"
 	"os"
+	"strings"
+	"net/url"
 	_ "github.com/mattn/go-sqlite3"
 )
 
@@ -155,19 +157,18 @@ func mergeDatabase(urls []string, path string, temp string) (*sql.DB, error) {
 	for _, url := range urls {
 
 		//download the url
-		err = download(url, temp)
+		path, err = download(url, temp)
 		fmt.Println("downloaded urls")
 		if err != nil {
-			log.Fatalf("Did not download %v", err)
 			outputdb.Close()
+			return nil, fmt.Errorf("mergeDatabases: %v", err)
 		}
 
 		// gatherinto the databaser or merge database
 		err = gatherinto(outputdb, path)
-
 		if err != nil {
-			log.Printf("Did not gatherinto %v", err)
 			outputdb.Close()
+			return nil, fmt.Errorf("mergeDatabases: %v", err)
 		}
 
 		//delete temperary string variable
@@ -182,7 +183,7 @@ func mergeDatabase(urls []string, path string, temp string) (*sql.DB, error) {
 }
 
 // need to make function download
-func download(url, path string) error {
+func download(URL, path string) (string, error) {
 
 	fmt.Println("started downloads")
 	pathname, err := os.Create(path)
@@ -192,22 +193,37 @@ func download(url, path string) error {
 	}
 	defer pathname.Close()
 
-	res, err := http.Get(url)
+	res, err := http.Get(URL)
 	if err != nil {
-		log.Fatalf("Failed to get file %v", err)
+		return "", fmt.Errorf("download: http.Get error: %v", err)
 	}
 	if res.StatusCode != http.StatusOK{
-		return fmt.Errorf("Download: http.Get, not okay %v", res.Body)
+		return "", fmt.Errorf("download: http.Get: not okay %v", res.Body)
 	}
 	defer res.Body.Close()
+	fileURL, err := url.Parse(URL)
+	if err != nil {
+		return "", fmt.Errorf("download: url.Parse: %v", err)
+	}
+	filepath := fileURL.Path
+	log.Printf("filepath: %v", filepath)
+	segments := strings.Split(filepath, "/")
+	fileName := segments[len(segments)-1]
+	fullFilePath := path + "/" + fileName
+	log.Printf("fullfile path: %v", fullFilePath)
+	out, err := os.Create(fullFilePath)
+	if err != nil {
+		return "", fmt.Errorf("download: os.Create: %v", err)
+	}
+	defer out.Close()
 
 	_, err = io.Copy(pathname, res.Body)
 	if err != nil {
-		log.Fatalf("Failed to copy file %v", err)
+		return "", fmt.Errorf("download: io.Copy: %v", err)
 	}
 	fmt.Println("finished downloading")
 
-	return nil
+	return fullFilePath, err
 }
 
 // need to make function gatherinto
