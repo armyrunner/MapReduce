@@ -158,7 +158,7 @@ func mergeDatabase(urls []string, path string, temp string) (*sql.DB, error) {
 
 		//download the url
 		path, err = download(url, temp)
-		fmt.Println("downloaded urls")
+		fmt.Println("downloaded url")
 		if err != nil {
 			outputdb.Close()
 			return nil, fmt.Errorf("mergeDatabases: %v", err)
@@ -185,14 +185,6 @@ func mergeDatabase(urls []string, path string, temp string) (*sql.DB, error) {
 // need to make function download
 func download(URL, path string) (string, error) {
 
-	fmt.Println("started downloads")
-	pathname, err := os.Create(path)
-	if err != nil {
-		log.Fatalf("Failed to create file %v", err)
-
-	}
-	defer pathname.Close()
-
 	res, err := http.Get(URL)
 	if err != nil {
 		return "", fmt.Errorf("download: http.Get error: %v", err)
@@ -211,13 +203,13 @@ func download(URL, path string) (string, error) {
 	fileName := segments[len(segments)-1]
 	fullFilePath := path + "/" + fileName
 	log.Printf("fullfile path: %v", fullFilePath)
-	out, err := os.Create(fullFilePath)
+	output, err := os.Create(fullFilePath)
 	if err != nil {
 		return "", fmt.Errorf("download: os.Create: %v", err)
 	}
-	defer out.Close()
+	defer output.Close()
 
-	_, err = io.Copy(pathname, res.Body)
+	_, err = io.Copy(output, res.Body)
 	if err != nil {
 		return "", fmt.Errorf("download: io.Copy: %v", err)
 	}
