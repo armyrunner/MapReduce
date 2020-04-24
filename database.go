@@ -26,7 +26,7 @@ func openDatabase(filename string) (*sql.DB, error) {
 		log.Fatalf("opening db: %v", err)
 	}
 	
-	fmt.Println("Success in opening database")
+	// fmt.Println("Success in opening database")
 
 	return db, nil
 }
@@ -35,13 +35,10 @@ func createDatabase(filename string) (*sql.DB, error) {
 
 	os.Remove(filename)
 
-
 	db, err := openDatabase(filename)
 	if err != nil {
 		return nil,err
 	}
-
-
 
 	createStmt := `
 	CREATE TABLE IF NOT EXISTS pairs(
@@ -52,7 +49,7 @@ func createDatabase(filename string) (*sql.DB, error) {
 		log.Fatalf("running create database: %v", err)
 	}
 
-	fmt.Println("Success in creating table pairs")
+	// fmt.Println("Success in creating table pairs")
 
 	return db, nil
 }
@@ -60,7 +57,7 @@ func createDatabase(filename string) (*sql.DB, error) {
 func splitDatabase(source, outputPattern string, m int) ([]string, error) {
 
 	// open the database
-	fmt.Println("opening database")
+	// fmt.Println("opening database")
 	maindb, err := openDatabase(source)
 	//create a list slice of all the outputdatabase
 	var allSplits  []*sql.DB
@@ -78,8 +75,8 @@ func splitDatabase(source, outputPattern string, m int) ([]string, error) {
 		var splitDB *sql.DB
 
 		//get outpout of pathnames
-		pathnamestring := fmt.Sprintf(outputPattern, i)
-
+		pathnamestring := fmt.Sprintf(outputPattern,i)
+		
 		//createing new database
 		splitDB, err := createDatabase(pathnamestring)
 
@@ -112,10 +109,6 @@ func splitDatabase(source, outputPattern string, m int) ([]string, error) {
 		err := rows.Scan(&key, &value)
 
 		db := allSplits[index]
-
-		// if err != nil {
-		// 	log.Fatalf("Did not insert key/value into pairs")
-		// }
 
 		_, err = db.Exec(`INSERT INTO pairs (key,value) values (?, ?)`, key, value)
 		if err != nil {
@@ -150,16 +143,19 @@ func mergeDatabase(urls []string, path string, temp string) (*sql.DB, error) {
 
 	//create the output databasef
 	outputdb, err := createDatabase(path)
+	fmt.Println("created datbase")
 	if err != nil {
 		log.Fatalf("Did not create database %v", err)
 
 	}
 
 	// loop through all the urls
+	fmt.Println("begining to loop through the urls")
 	for _, url := range urls {
 
 		//download the url
 		err = download(url, temp)
+		fmt.Println("downloaded urls")
 		if err != nil {
 			log.Fatalf("Did not download %v", err)
 
@@ -167,6 +163,7 @@ func mergeDatabase(urls []string, path string, temp string) (*sql.DB, error) {
 
 		// gatherinto the databaser or merge database
 		err = gatherinto(outputdb, path)
+
 		if err != nil {
 			log.Printf("Did not gatherinto %v", err)
 
@@ -186,6 +183,7 @@ func mergeDatabase(urls []string, path string, temp string) (*sql.DB, error) {
 // need to make function download
 func download(url, path string) error {
 
+	fmt.Println("started downloads")
 	pathname, err := os.Create(path)
 	if err != nil {
 		log.Fatalf("Failed to create file %v", err)
@@ -195,8 +193,7 @@ func download(url, path string) error {
 
 	res, err := http.Get(url)
 	if err != nil {
-
-		log.Fatalf("Failed to download file %v", err)
+		log.Fatalf("Failed to get file %v", err)
 
 	}
 	defer res.Body.Close()
@@ -205,6 +202,7 @@ func download(url, path string) error {
 	if err != nil {
 		log.Fatalf("Failed to copy file %v", err)
 	}
+	fmt.Println("finished downloading")
 
 	return nil
 }
