@@ -25,8 +25,9 @@ func openDatabase(filename string) (*sql.DB, error) {
 	if err != nil {
 		log.Fatalf("opening db: %v", err)
 	}
+	
 	fmt.Println("Success in opening database")
-	db.Close()
+
 	return db, nil
 }
 
@@ -34,11 +35,10 @@ func createDatabase(filename string) (*sql.DB, error) {
 
 	os.Remove(filename)
 
-	db, err := sql.Open("sqlite3", filename)
-	defer db.Close()
-	
+
+	db, err := openDatabase(filename)
 	if err != nil {
-		log.Fatalf("opening db: %v", err)
+		return nil,err
 	}
 
 	createStmt := `
@@ -94,7 +94,7 @@ func splitDatabase(source, outputPattern string, m int) ([]string, error) {
 
 	rows, err := maindb.Query(`SELECT key, value FROM pairs;`)
 	if err != nil {
-		log.Fatalf("Did not find key/value in pairs")
+		log.Fatalf("Did not find key/value in pairs %v",err)
 	}
 
 	// initialize the index value
@@ -219,7 +219,7 @@ func gatherinto(db *sql.DB, path string) error {
 
 	}
 
-	_, err = db.Exec(`INSERT INTO PAIRS SELECT * FROM merge.pairs`)
+	_, err = db.Exec(`INSERT INTO pairs SELECT * FROM merge.pairs`)
 	if err != nil {
 		log.Fatalf("Did not insert into merge.pairs %v", err)
 
