@@ -36,12 +36,12 @@ func TestDatabase(){
 				fmt.Printf("%s: %d\n",f,splitCount)
 				splitTotal += splitCount
 			} else {
-				fmt.Errorf(" %s: %v",f,err)
+				fmt.Printf(" %s: %v",f,err)
 				break
 			}
 		}
 		if splitTotal != totalRows{
-			fmt.Errorf("Split Total (%d) != Source Total (%d)", splitTotal, totalRows)
+			fmt.Printf("Split Total (%d) != Source Total (%d)", splitTotal, totalRows)
 		}
 		
 	}else{
@@ -52,7 +52,7 @@ func TestDatabase(){
 	go func() {
 		http.Handle("/data/", http.StripPrefix("/data", http.FileServer(http.Dir(tempdir))))
 		if err := http.ListenAndServe(address, nil); err != nil {
-			fmt.Errorf("Error in HTTP server [%s] %v", address, err)
+			fmt.Printf("Error in HTTP server [%s] %v", address, err)
 			log.Fatalf("%v",err)
 		}
 	}()
@@ -61,6 +61,7 @@ func TestDatabase(){
 		_, fn := filepath.Split(file)
 		filePaths[i] = "http://" + address + "/data/" + fn
 	}
+	
 	_, err = mergeDatabase(filePaths, filepath.Join(tempdir, "copyausten.db"), filepath.Join(tempdir, "temp.db"))
 	if err != nil {
 		log.Fatalf("Error in mergeDatabase %v",err)
@@ -73,7 +74,7 @@ func TestDatabase(){
 	fmt.Printf("Total Rows Copied:  %d\n", copytot)
 
 	if copytot != totalRows {
-		fmt.Errorf("Copy Total (%d) != Source Total (%d)", copytot, totalRows)
+		fmt.Printf("Copy Total (%d) != Source Total (%d)", copytot, totalRows)
 	}
 
 }
