@@ -142,6 +142,7 @@ func splitDatabase(source, outputPattern string, m int) ([]string, error) {
 func mergeDatabase(urls []string, path string, temp string) (*sql.DB, error) {
 
 	//create the output databasef
+	var outputdb *sql.DB
 	outputdb, err := createDatabase(path)
 	fmt.Println("created datbase")
 	if err != nil {
@@ -158,7 +159,7 @@ func mergeDatabase(urls []string, path string, temp string) (*sql.DB, error) {
 		fmt.Println("downloaded urls")
 		if err != nil {
 			log.Fatalf("Did not download %v", err)
-
+			outputdb.Close()
 		}
 
 		// gatherinto the databaser or merge database
@@ -166,7 +167,7 @@ func mergeDatabase(urls []string, path string, temp string) (*sql.DB, error) {
 
 		if err != nil {
 			log.Printf("Did not gatherinto %v", err)
-
+			outputdb.Close()
 		}
 
 		//delete temperary string variable
@@ -194,7 +195,6 @@ func download(url, path string) error {
 	res, err := http.Get(url)
 	if err != nil {
 		log.Fatalf("Failed to get file %v", err)
-
 	}
 	defer res.Body.Close()
 
