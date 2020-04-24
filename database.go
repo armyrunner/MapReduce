@@ -201,6 +201,7 @@ func download(URL, path string) (string, error) {
 	if err != nil {
 		return "", fmt.Errorf("download: url.Parse: %v", err)
 	}
+	
 	filepath := fileURL.Path
 	log.Printf("filepath: %v", filepath)
 	segments := strings.Split(filepath, "/")
