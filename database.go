@@ -196,6 +196,9 @@ func download(url, path string) error {
 	if err != nil {
 		log.Fatalf("Failed to get file %v", err)
 	}
+	if res.StatusCode != http.StatusOK{
+		return fmt.Errorf("Download: http.Get, not okay %v", res.Body)
+	}
 	defer res.Body.Close()
 
 	_, err = io.Copy(pathname, res.Body)
