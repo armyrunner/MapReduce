@@ -7,6 +7,8 @@ import (
 	"log"
 	"net/http"
 	"os"
+	"strings"
+	"net/url"
 	_ "github.com/mattn/go-sqlite3"
 )
 
@@ -146,6 +148,7 @@ func splitDatabase(source, outputPattern string, m int) ([]string, error) {
 func mergeDatabase(urls []string, path string, temp string) (*sql.DB, error) {
 
 	//create the output database
+	var outputdb *sql.DB
 	outputdb, err := createDatabase(path)
 	fmt.Println("created datbase")
 	if err != nil {
@@ -160,8 +163,8 @@ func mergeDatabase(urls []string, path string, temp string) (*sql.DB, error) {
 	for _, url := range urls {
 
 		//download the url
-		err = download(url, temp)
-		fmt.Println("downloaded urls")
+		path, err = download(url, temp)
+		fmt.Println("downloaded url")
 		if err != nil {
 			tempdb.Close()
 			os.Remove(temp)
@@ -183,13 +186,11 @@ func mergeDatabase(urls []string, path string, temp string) (*sql.DB, error) {
 }
 
 // need to make function download
-func download(url, path string) error {
+func download(URL, path string) (string, error) {
 
-	fmt.Println("started downloads")
-	pathname, err := os.Create(path)
+	res, err := http.Get(URL)
 	if err != nil {
-		log.Fatalf("Failed to create file %v", err)
-
+		return "", fmt.Errorf("download: http.Get error: %v", err)
 	}
 	defer pathname.Close()
 
@@ -198,14 +199,29 @@ func download(url, path string) error {
 		return err
 	}
 	defer res.Body.Close()
+	fileURL, err := url.Parse(URL)
+	if err != nil {
+		return "", fmt.Errorf("download: url.Parse: %v", err)
+	}
+	filepath := fileURL.Path
+	log.Printf("filepath: %v", filepath)
+	segments := strings.Split(filepath, "/")
+	fileName := segments[len(segments)-1]
+	fullFilePath := path + "/" + fileName
+	log.Printf("fullfile path: %v", fullFilePath)
+	output, err := os.Create(fullFilePath)
+	if err != nil {
+		return "", fmt.Errorf("download: os.Create: %v", err)
+	}
+	defer output.Close()
 
-	_, err = io.Copy(pathname, res.Body)
+	_, err = io.Copy(output, res.Body)
 	if err != nil {
 		return err
 	}
 	fmt.Println("finished downloading")
 
-	return nil
+	return fullFilePath, err
 }
 
 // need to make function gatherinto
