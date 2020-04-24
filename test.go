@@ -20,11 +20,10 @@ func TestDatabase(){
 
 	tempdir := filepath.Join("./tmp/", fmt.Sprintf("mapreduce.%d",os.Getpid()))
 	log.Printf("Tmp dir is %s\n",tempdir)
-	log.Printf("mapreduce.%d",os.Getpid())
 	os.MkdirAll(tempdir,0777)
 	defer os.RemoveAll(tempdir)
 
-    filePaths, err := splitDatabase("DBFiles/austen.db",tempdir,10)
+    filePaths, err := splitDatabase("DBFiles/austen.db",tempdir+"/map_%d_source.db",10)
 	if err == nil{
 		var splitCount, splitTotal int
 		for _, f := range filePaths{
@@ -50,7 +49,8 @@ func TestDatabase(){
 
 	address := "localhost:8080"
 	go func() {
-		http.Handle("/data/", http.StripPrefix("/data", http.FileServer(http.Dir(tempdir))))
+		fmt.Println("Started Server")
+		http.Handle("/data/", http.StripPrefix("/data", http.FileServer(http.Dir("mnt/d/School/cs3410/src/MapReduce"))))
 		if err := http.ListenAndServe(address, nil); err != nil {
 			fmt.Printf("Error in HTTP server [%s] %v", address, err)
 			log.Fatalf("%v",err)
@@ -62,7 +62,7 @@ func TestDatabase(){
 		filePaths[i] = "http://" + address + "/data/" + fn
 	}
 	
-	_, err = mergeDatabase(filePaths, filepath.Join(tempdir, "copyausten.db"), filepath.Join(tempdir, "temp.db"))
+	_, err = mergeDatabase(filePaths, filepath.Join(tempdir, "copyausten.db"), filepath.Join( "temp.db"))
 	if err != nil {
 		log.Fatalf("Error in mergeDatabase %v",err)
 	}
