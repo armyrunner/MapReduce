@@ -60,7 +60,7 @@ func createDatabase(filename string) (*sql.DB, error) {
 func splitDatabase(source, outputPattern string, m int) ([]string, error) {
 
 	// open the database
-	// fmt.Println("opening database")
+	fmt.Println("opening database")
 	maindb, err := openDatabase(source)
 	//create a list slice of all the outputdatabase
 	var allSplits  []*sql.DB
@@ -78,7 +78,7 @@ func splitDatabase(source, outputPattern string, m int) ([]string, error) {
 		var splitDB *sql.DB
 
 		//get outpout of pathnames
-		pathnamestring := filepath.Join(outputPattern,i)
+		pathnamestring := fmt.Sprintf(outputPattern,i)
 		
 		//createing new database
 		splitDB, err := createDatabase(pathnamestring)
@@ -107,7 +107,7 @@ func splitDatabase(source, outputPattern string, m int) ([]string, error) {
 	keys := 0
 	index := 0
 
-	// looping through all the rows
+	// // looping through all the rows
 	for rows.Next() {
 
 		var key string
@@ -120,9 +120,11 @@ func splitDatabase(source, outputPattern string, m int) ([]string, error) {
 		_, err = db.Exec(`INSERT INTO pairs (key,value) values (?, ?)`, key, value)
 		if err != nil {
 			return nil, err
+		}
 
 		index++
 		keys++
+
 		if index >= m{
 			index = 0
 		}
@@ -130,7 +132,7 @@ func splitDatabase(source, outputPattern string, m int) ([]string, error) {
 
 	//check err if anything went wrong
 	if err := rows.Err(); err != nil{
-		fmt.Println("We have an error splitDatabase rows.Err()", err);
+		return nil, err
 	}
 
 	maindb.Close()
@@ -148,12 +150,14 @@ func splitDatabase(source, outputPattern string, m int) ([]string, error) {
 func mergeDatabase(urls []string, path string, temp string) (*sql.DB, error) {
 
 	//create the output database
+
 	var outputdb *sql.DB
+	
 	outputdb, err := createDatabase(path)
 	fmt.Println("created datbase")
 	if err != nil {
 		os.Remove(path)
-		return nil,err
+		return nil, err
 
 	}
 
@@ -190,13 +194,7 @@ func download(URL, path string) (string, error) {
 
 	res, err := http.Get(URL)
 	if err != nil {
-		return "", fmt.Errorf("download: http.Get error: %v", err)
-	}
-	defer pathname.Close()
-
-	res, err := http.Get(url)
-	if err != nil {
-		return err
+		return " ", err
 	}
 	defer res.Body.Close()
 	fileURL, err := url.Parse(URL)
@@ -217,7 +215,7 @@ func download(URL, path string) (string, error) {
 
 	_, err = io.Copy(output, res.Body)
 	if err != nil {
-		return err
+		return " ",err
 	}
 	fmt.Println("finished downloading")
 
