@@ -230,26 +230,6 @@ func download(URL, path string) (error) {
 
 	res, err := http.Get(URL)
 	if err != nil {
-<<<<<<< HEAD
-		return " ", err
-	}
-	defer res.Body.Close()
-	fileURL, err := url.Parse(URL)
-	if err != nil {
-		return "", fmt.Errorf("download: url.Parse: %v", err)
-	}
-	filepath := fileURL.Path
-	log.Printf("filepath: %v", filepath)
-	segments := strings.Split(filepath, "/")
-	fileName := segments[len(segments)-1]
-	fullFilePath := path + "/" + fileName
-	log.Printf("fullfile path: %v", fullFilePath)
-	output, err := os.Create(fullFilePath)
-	if err != nil {
-		return "", fmt.Errorf("download: os.Create: %v", err)
-	}
-	defer output.Close()
-=======
 		return err
 	}
 	defer output.Close()
@@ -273,7 +253,6 @@ func download(URL, path string) (error) {
 	// }
 
 	defer res.Body.Close()
->>>>>>> 2b9aad33c185e9558302e445f4cc69459b605854
 
 	_, err = io.Copy(output, res.Body)
 	if err != nil {
