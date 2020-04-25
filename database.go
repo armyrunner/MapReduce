@@ -7,8 +7,6 @@ import (
 	"log"
 	"net/http"
 	"os"
-	"strings"
-	"net/url"
 	_ "github.com/mattn/go-sqlite3"
 )
 
@@ -41,19 +39,19 @@ func createDatabase(filename string) (*sql.DB, error) {
 		return nil,err
 	}
 
-	createStmt := `
-	CREATE TABLE IF NOT EXISTS pairs(
+	createStmt := `CREATE TABLE IF NOT EXISTS pairs(
 		key text primary key,
 		value text)`
 
-	if _, err := db.Exec(createStmt); err != nil {
+ 	_, err  = db.Exec(createStmt)
+	if err != nil {
 		db.Close()
 		os.Remove(filename)
 		return nil, err
 	}
 
 	// fmt.Println("Success in creating table pairs")
-
+	
 	return db, nil
 }
 
@@ -149,87 +147,127 @@ func splitDatabase(source, outputPattern string, m int) ([]string, error) {
 
 func mergeDatabase(urls []string, path string, temp string) (*sql.DB, error) {
 
-	//create the output database
-
-	var outputdb *sql.DB
-	
-	outputdb, err := createDatabase(path)
-	fmt.Println("created datbase")
+	newdb, err := createDatabase(path)
+	// fmt.Println(newdb)
 	if err != nil {
 		os.Remove(path)
 		return nil, err
-
 	}
 
-	// loop through all the urls
-	fmt.Println("begining to loop through the urls")
 	tempdb, err := createDatabase(temp)
-	for _, url := range urls {
+	// fmt.Println(tempdb)
+	if err != nil {
+		os.Remove(temp)
+		return nil, err
+	}
 
-		//download the url
-		path, err = download(url, temp)
-		fmt.Println("downloaded url")
+	for _, url := range urls {
+		err = download(url, temp)
 		if err != nil {
 			tempdb.Close()
 			os.Remove(temp)
-			return nil,err
-
+			return nil, err
 		}
-
-		// gatherinto the databaser or merge database
-		err = gatherinto(outputdb, path)
+		err = gatherinto(newdb, temp)
 		if err != nil {
 			tempdb.Close()
 			return nil, err
 		}
-
 	}
 
-	outputdb.Close()
-	return outputdb, nil
+	tempdb.Close()
+	return newdb, nil
+
+	// fmt.Println(temp)
+	// outputdb, err := createDatabase(path)
+	// fmt.Println("created datbase")
+	// if err != nil {
+	// 	os.Remove(path)
+	// 	return nil, err
+
+	// }
+
+	// tempdb, err := createDatabase(temp)
+	// fmt.Println(tempdb)
+	// if err != nil {
+	// 	os.Remove(temp)
+	// 	return nil, err
+
+	// }
+
+	// // loop through all the urls
+	
+	// fmt.Println("begining to loop through the urls")
+	// for _, url := range urls {
+
+	// 	//download the url
+	// 	path, err = download(url, temp)
+	// 	fmt.Println("downloaded url")
+	// 	if err != nil {
+	// 		tempdb.Close()
+	// 		os.Remove(temp)
+	// 		return nil,err
+
+	// 	}
+
+	// 	// gatherinto the databaser or merge database
+	// 	err = gatherinto(outputdb, temp)
+	// 	if err != nil {
+	// 		tempdb.Close()
+	// 		return nil, err
+	// 	}
+
+	// }
+
+	// outputdb.Close()
+	// return outputdb, nil
 }
 
 // need to make function download
-func download(URL, path string) (string, error) {
+func download(URL, path string) (error) {
+
+	output, err := os.Create(path)
 
 	res, err := http.Get(URL)
 	if err != nil {
-		return " ", err
-	}
-	defer res.Body.Close()
-	
-	fileURL, err := url.Parse(URL)
-	if err != nil {
-		return "", fmt.Errorf("download: url.Parse: %v", err)
-	}
-
-	filepath := fileURL.Path
-	log.Printf("filepath: %v", filepath)
-	segments := strings.Split(filepath, "/")
-	fileName := segments[len(segments)-1]
-	fullFilePath := path + "/" + fileName
-	log.Printf("fullfile path: %v", fullFilePath)
-
-	output, err := os.Create(fullFilePath)
-
-	if err != nil {
-		return "", fmt.Errorf("download: os.Create: %v", err)
+		return err
 	}
 	defer output.Close()
 
+	// fileURL, err := url.Parse(URL)
+	// if err != nil {
+	// 	return "", fmt.Errorf("download: url.Parse: %v", err)
+	// }
+
+	// filepath := fileURL.Path
+	// log.Printf("filepath: %v", filepath)
+	// segments := strings.Split(filepath, "/")
+	// fileName := segments[len(segments)-1]
+	// fullFilePath := path + "/" + fileName
+	// log.Printf("fullfile path: %v", fullFilePath)
+
+	
+
+	// if err != nil {
+	// 	return "", fmt.Errorf("download: os.Create: %v", err)
+	// }
+
+	defer res.Body.Close()
+
 	_, err = io.Copy(output, res.Body)
 	if err != nil {
-		return " ",err
+		return err
 	}
 	fmt.Println("finished downloading")
 
-	return fullFilePath, err
+	return nil
 }
 
 // need to make function gatherinto
 
 func gatherinto(db *sql.DB, path string) error {
 
+	fmt.Println("started to gatherinto ",path)
 	querydatabase := fmt.Sprintf("attach '%s' as merge;", path)
 
 	_, err := db.Exec(querydatabase)
