@@ -65,7 +65,7 @@ func TestDatabase(){
 		filePaths[i] = "http://" + address + "/data/" + fn
 	}
 	
-	_, err = mergeDatabase(filePaths, filepath.Join(tempdir, "copyausten.db"), filepath.Join( "temp.db"))
+	_, err = mergeDatabase(filePaths, filepath.Join(tempdir, "copyausten.db"), filepath.Join( tempdir))
 	if err != nil {
 		log.Fatalf("Error in mergeDatabase %v",err)
 	}
