@@ -197,21 +197,17 @@ func download(URL, path string) (string, error) {
 		return " ", err
 	}
 	defer res.Body.Close()
-	
 	fileURL, err := url.Parse(URL)
 	if err != nil {
 		return "", fmt.Errorf("download: url.Parse: %v", err)
 	}
-
 	filepath := fileURL.Path
 	log.Printf("filepath: %v", filepath)
 	segments := strings.Split(filepath, "/")
 	fileName := segments[len(segments)-1]
 	fullFilePath := path + "/" + fileName
 	log.Printf("fullfile path: %v", fullFilePath)
-
 	output, err := os.Create(fullFilePath)
-
 	if err != nil {
 		return "", fmt.Errorf("download: os.Create: %v", err)
 	}
