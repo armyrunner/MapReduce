@@ -151,7 +151,7 @@ func testPart2(){
 	copyDB, _ := openDatabase(filepath.Join(tempdir, "copyausten.db"))
 	counts := copyDB.QueryRow(`SELECT key, value FROM pairs ORDER BY value+0 desc limit 20;`)
 	copyDB.Close()
-	fmt.Printf("Word Counts: %d", counts)
+	fmt.Printf("Word Counts: %v", counts)
 
 }
 

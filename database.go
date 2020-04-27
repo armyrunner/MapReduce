@@ -157,7 +157,7 @@ func mergeDatabase(urls []string, path string, temp string) (*sql.DB, error) {
 	tempdb, err := createDatabase(path)
 	// fmt.Println(tempdb)
 	if err != nil {
-		fmt.Println("1 err: ",err)
+		fmt.Println("2 err: ",err)
 		return nil, err
 	}
 
@@ -225,21 +225,22 @@ func gatherinto(db *sql.DB, path string) error {
 
 	_, err := db.Exec(querydatabase)
 	if err != nil {
-		fmt.Printf(" Err 1: %v",err)
+		fmt.Printf(" Err 1 GatherInto: %v",err)
 	}
 
-	_, err = db.Exec(`INSERT INTO pairs SELECT * FROM merge.pairs`)
+	_, err = db.Exec(`INSERT INTO pairs SELECT * FROM merge.pairs;`)
 	if err != nil {
-		fmt.Printf(" Err 2: %v",err)
+		fmt.Printf(" Err 2 GatherInto: %v",err)
 
 	}
 
 	_, err = db.Exec("detach merge;")
 	if err != nil {
-		fmt.Printf(" Err 3: %v",err)
+		fmt.Printf(" Err 3 GatherInto: %v",err)
 	}
 
 	return nil
 
 }
+
 

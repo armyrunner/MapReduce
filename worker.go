@@ -127,7 +127,7 @@ func (task *MapTask) Process(tempdir string, client Interface) error{
 func (task *ReduceTask) Process(tempdir string, client Interface) error{
 	log.Printf("Reduce Task Running on %v...", task.N)
 	input := reduceInputFile(task.N)
-	inputdb, err := mergeDatabase(task.SourceHosts, tempdir+"/"+input, tempdir)
+	inputdb, err := mergeDatabase(task.SourceHosts, filepath.Join(tempdir, reduceInputFile(task.N)), filepath.Join(tempdir, input))
 	if err != nil{
 		return fmt.Errorf("Reduce Process: %v", err)
 	}
