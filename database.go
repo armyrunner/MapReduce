@@ -60,10 +60,12 @@ func splitDatabase(source, outputPattern string, m int) ([]string, error) {
 	// open the database
 	fmt.Println("opening database")
 	maindb, err := openDatabase(source)
+
 	//create a list slice of all the outputdatabase
-	var allSplits  []*sql.DB
+	allSplits := make([]*sql.DB,0)
+
 	//create a list of slices of pathnames
-	var outputs []string
+	outputs := make([]string,0)
 
 	if err != nil {
 		log.Fatalf("split database: %v", err)
@@ -72,20 +74,17 @@ func splitDatabase(source, outputPattern string, m int) ([]string, error) {
 	defer maindb.Close()
 
 	for i := 0; i < m; i++ { 
-
-		var splitDB *sql.DB
-
+	
 		//get outpout of pathnames
 		pathnamestring := fmt.Sprintf(outputPattern,i)
-		
+
 		//createing new database
 		splitDB, err := createDatabase(pathnamestring)
 
+		defer splitDB.Close()
+
 		if err != nil {
-			for _, t := range allSplits{
-				t.Close()
-			}
-			maindb.Close()
+
 			return nil, err
 		}
 
@@ -148,109 +147,63 @@ func splitDatabase(source, outputPattern string, m int) ([]string, error) {
 func mergeDatabase(urls []string, path string, temp string) (*sql.DB, error) {
 
 	newdb, err := createDatabase(path)
-	// fmt.Println(newdb)
-	if err != nil {
-		os.Remove(path)
-		return nil, err
-	}
-
-	tempdb, err := createDatabase(temp)
 	// fmt.Println(tempdb)
 	if err != nil {
-		os.Remove(temp)
+		fmt.Println("1 err: ",err)
 		return nil, err
 	}
 
+	var splitCount = 0
+	tempdb, err := createDatabase(path)
+	// fmt.Println(tempdb)
+	if err != nil {
+		fmt.Println("1 err: ",err)
+		return nil, err
+	}
+
+	
 	for _, url := range urls {
 		err = download(url, temp)
 		if err != nil {
-			tempdb.Close()
-			os.Remove(temp)
+			// tempdb.Close()
+			// os.Remove(temp)
+			fmt.Println("3 err: ",err)
 			return nil, err
 		}
+		
+		newdb.QueryRow(`SELECT COUNT(key) FROM pairs`).Scan(&splitCount)
+		fmt.Printf("The Number is: %d\n",splitCount)
+		
 		err = gatherinto(newdb, temp)
 		if err != nil {
-			tempdb.Close()
+
+			fmt.Println("4 err: ",err)
+			// tempdb.Close()
 			return nil, err
 		}
 	}
 
+	newdb.QueryRow(`SELECT COUNT(key) FROM pairs`).Scan(&splitCount)
+	fmt.Printf("The Number is: %d\n",splitCount)
+
 	tempdb.Close()
-	return newdb, nil
-
-	// fmt.Println(temp)
-	// outputdb, err := createDatabase(path)
-	// fmt.Println("created datbase")
-	// if err != nil {
-	// 	os.Remove(path)
-	// 	return nil, err
-
-	// }
-
-	// tempdb, err := createDatabase(temp)
-	// fmt.Println(tempdb)
-	// if err != nil {
-	// 	os.Remove(temp)
-	// 	return nil, err
-
-	// }
-
-	// // loop through all the urls
-	
-	// fmt.Println("begining to loop through the urls")
-	// for _, url := range urls {
-
-	// 	//download the url
-	// 	path, err = download(url, temp)
-	// 	fmt.Println("downloaded url")
-	// 	if err != nil {
-	// 		tempdb.Close()
-	// 		os.Remove(temp)
-	// 		return nil,err
-
-	// 	}
-
-	// 	// gatherinto the databaser or merge database
-	// 	err = gatherinto(outputdb, temp)
-	// 	if err != nil {
-	// 		tempdb.Close()
-	// 		return nil, err
-	// 	}
-
-	// }
-
-	// outputdb.Close()
-	// return outputdb, nil
+	return tempdb, nil
 }
 
 // need to make function download
 func download(URL, path string) (error) {
 
 	output, err := os.Create(path)
-
+	if err !=nil{
+		return err
+	}
+	
+	defer output.Close()
+	
 	res, err := http.Get(URL)
 	if err != nil {
 		return err
 	}
-	defer output.Close()
-
-	// fileURL, err := url.Parse(URL)
-	// if err != nil {
-	// 	return "", fmt.Errorf("download: url.Parse: %v", err)
-	// }
-
-	// filepath := fileURL.Path
-	// log.Printf("filepath: %v", filepath)
-	// segments := strings.Split(filepath, "/")
-	// fileName := segments[len(segments)-1]
-	// fullFilePath := path + "/" + fileName
-	// log.Printf("fullfile path: %v", fullFilePath)
-
-	
-
-	// if err != nil {
-	// 	return "", fmt.Errorf("download: os.Create: %v", err)
-	// }
 
 	defer res.Body.Close()
 
@@ -258,7 +211,7 @@ func download(URL, path string) (error) {
 	if err != nil {
 		return err
 	}
-	fmt.Println("finished downloading")
+	fmt.Println("finished downloading",output )
 
 	return nil
 }
@@ -272,25 +225,18 @@ func gatherinto(db *sql.DB, path string) error {
 
 	_, err := db.Exec(querydatabase)
 	if err != nil {
-		db.Close()
-		os.Remove(path)
-		return err
-
+		fmt.Printf(" Err 1: %v",err)
 	}
 
 	_, err = db.Exec(`INSERT INTO pairs SELECT * FROM merge.pairs`)
 	if err != nil {
-		db.Close()
-		os.Remove(path)
-		return err
+		fmt.Printf(" Err 2: %v",err)
 
 	}
 
 	_, err = db.Exec("detach merge;")
 	if err != nil {
-		db.Close()
-		os.Remove(path)
-		return err
+		fmt.Printf(" Err 3: %v",err)
 	}
 
 	return nil

@@ -10,6 +10,6 @@ func main() {
 
 	runtime.GOMAXPROCS(1)
 
-	TestDatabase()
+	testPart2()
 }
 
