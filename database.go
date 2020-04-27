@@ -230,7 +230,7 @@ func gatherinto(db *sql.DB, path string) error {
 
 	_, err = db.Exec(`INSERT INTO pairs SELECT * FROM merge.pairs;`)
 	if err != nil {
-		fmt.Printf(" Err 2 GatherInto: %v",err)
+		fmt.Printf(" Err 2 GatherInto: %v\n", err)
 
 	}
 
