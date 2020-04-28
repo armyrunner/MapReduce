@@ -40,7 +40,7 @@ func createDatabase(filename string) (*sql.DB, error) {
 	}
 
 	createStmt := `CREATE TABLE IF NOT EXISTS pairs(
-		key text primary key,
+		key text,
 		value text)`
 
  	_, err  = db.Exec(createStmt)

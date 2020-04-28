@@ -119,7 +119,7 @@ func (task *MapTask) Process(tempdir string, client Interface) error{
 		}
 		err = <-finished
 	}
-	log.Printf("Maptask.Process processed %v pairs and generated %v pairs", processed, total)
+	log.Printf("Maptask.Process processed %v pairs and generated %v pairs\n\n", processed, total)
 	return err
 }
 
@@ -200,6 +200,6 @@ func (task *ReduceTask) Process(tempdir string, client Interface) error{
 	inputstr = nil
 	<-finished
 	<-finished
-	log.Printf("ReduceTask.Process processed %v pairs, and generated %v total pairs", processed, total)
+	log.Printf("ReduceTask.Process processed %v pairs, and generated %v total pairs\n\n", processed, total)
 	return err
 }
