@@ -94,14 +94,16 @@ func testPart2(){
     tempdir := filepath.Join(os.TempDir(), fmt.Sprintf("mapreduce.%d", os.Getpid()))
 	// tempdir := "./tmp"
 	log.Printf("Tmp dir is %s\n",tempdir)
+	os.RemoveAll(tempdir)
 	os.MkdirAll(tempdir,0777)
 	// defer os.RemoveAll(tempdir)
 	address := "localhost:8080"
 
 	go func() {
+		log.Printf("Starting HTTP File Server: %s\tServing\t%s", address, tempdir)
 		http.Handle("/data/", http.StripPrefix("/data", http.FileServer(http.Dir(tempdir))))
 		if err := http.ListenAndServe(address, nil); err != nil {
-		log.Printf("Error in HTTP server for %s: %v", address, err)
+			log.Printf("Error in HTTP server for %s: %v", address, err)
 		}
 
 	}()

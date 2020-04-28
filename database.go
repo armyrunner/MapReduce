@@ -154,7 +154,7 @@ func mergeDatabase(urls []string, path string, temp string) (*sql.DB, error) {
 	}
 
 	var splitCount = 0
-	tempdb, err := createDatabase(path)
+	tempdb, err := createDatabase(temp)
 	// fmt.Println(tempdb)
 	if err != nil {
 		fmt.Println("2 err: ",err)
@@ -172,7 +172,7 @@ func mergeDatabase(urls []string, path string, temp string) (*sql.DB, error) {
 		}
 		
 		newdb.QueryRow(`SELECT COUNT(key) FROM pairs`).Scan(&splitCount)
-		fmt.Printf("The Number is: %d\n",splitCount)
+		fmt.Printf("The first number is: %d\n",splitCount)
 		
 		err = gatherinto(newdb, temp)
 		if err != nil {
@@ -184,10 +184,10 @@ func mergeDatabase(urls []string, path string, temp string) (*sql.DB, error) {
 	}
 
 	newdb.QueryRow(`SELECT COUNT(key) FROM pairs`).Scan(&splitCount)
-	fmt.Printf("The Number is: %d\n",splitCount)
+	fmt.Printf("The second number is: %d\n",splitCount)
 
 	tempdb.Close()
-	return tempdb, nil
+	return newdb, nil
 }
 
 // need to make function download
@@ -211,7 +211,7 @@ func download(URL, path string) (error) {
 	if err != nil {
 		return err
 	}
-	fmt.Println("finished downloading",output )
+	fmt.Println("finished downloading")
 
 	return nil
 }
@@ -220,23 +220,22 @@ func download(URL, path string) (error) {
 
 func gatherinto(db *sql.DB, path string) error {
 
-	fmt.Println("started to gatherinto ",path)
+	fmt.Println("started Gather Into... ")
 	querydatabase := fmt.Sprintf("attach '%s' as merge;", path)
 
 	_, err := db.Exec(querydatabase)
 	if err != nil {
-		fmt.Printf(" Err 1 GatherInto: %v",err)
+		fmt.Printf("Err 1 GatherInto: %v",err)
 	}
 
 	_, err = db.Exec(`INSERT INTO pairs SELECT * FROM merge.pairs;`)
 	if err != nil {
-		fmt.Printf(" Err 2 GatherInto: %v\n", err)
-
+		fmt.Printf("Err 2 GatherInto: %v\n", err)
 	}
 
 	_, err = db.Exec("detach merge;")
 	if err != nil {
-		fmt.Printf(" Err 3 GatherInto: %v",err)
+		fmt.Printf("Err 3 GatherInto: %v",err)
 	}
 
 	return nil
